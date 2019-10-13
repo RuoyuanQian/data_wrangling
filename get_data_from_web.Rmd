@@ -1,0 +1,155 @@
+---
+title: "Untitled"
+author: "DuDu"
+date: "10/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(rvest)
+library(httr)
+
+```
+
+## Get some data
+
+read in the NSGUH data
+```{r}
+## copy the "html" code from the webstes
+url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+
+## identify "html" code
+##  html_nodes(css = "table") read all tables in the website
+drug_use_xml = read_html(url) %>% 
+  html_nodes(css = "table") %>% 
+
+drug_use_xml
+
+## 用两个[[]] 可以选择读取哪一个table
+## [[1]] is the first table
+## . 的意思是选择table
+ (drug_use_xml %>% html_nodes(css = "table")) %>% 
+  .[[1]]
+
+## equal to this 
+ df = (drug_use_xml %>% html_nodes(css = "table")) 
+ df[[1]]
+ 
+## html_table() 可以提取element，但是形式奇怪，所以要加其他语句
+## slice(-1) 可以去掉table底下的注释，不然会乱
+ table_marj = 
+  (drug_use_xml %>% html_nodes(css = "table")) %>% 
+  .[[1]] %>%
+  html_table() %>% 
+   slice(-1) %>% 
+   as_tibble()
+```
+
+```{r}
+nyc_cost = 
+  read_html("https://www.bestplaces.net/cost_of_living/city/new_york/new_york") %>%
+  html_nodes(css = "table") %>%
+  .[[1]] %>%
+  html_table(header = TRUE)
+```
+
+## read table from the web
+```{r}
+## read table from the web
+hpsaga_html = 
+  read_html("https://www.imdb.com/list/ls000630791/")
+```
+
+
+## SelectotGadget
+## select the thing I am interested in from the web and than copy the code 
+```{r}
+
+title_vec = 
+  hpsaga_html %>%
+  html_nodes(".lister-item-header a") %>%
+  html_text()
+
+gross_rev_vec = 
+  hpsaga_html %>%
+  html_nodes(".text-small:nth-child(7) span:nth-child(5)") %>%
+  html_text()
+
+runtime_vec = 
+  hpsaga_html %>%
+  html_nodes(".runtime") %>%
+  html_text()
+
+hpsaga_df = 
+  tibble(
+    title = title_vec,
+    rev = gross_rev_vec,
+    runtime = runtime_vec)
+```
+```{r}
+url = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber=2"
+
+dynamite_html = read_html(url)
+
+review_titles = 
+  dynamite_html %>%
+  html_nodes(".a-text-bold span") %>%
+  html_text()
+
+review_stars = 
+  dynamite_html %>%
+  html_nodes("#cm_cr-review_list .review-rating") %>%
+  html_text()
+
+review_text = 
+  dynamite_html %>%
+  html_nodes(".review-text-content span") %>%
+  html_text()
+
+reviews = tibble(
+  title = review_titles,
+  stars = review_stars,
+  text = review_text
+)
+
+```
+
+## GET 可以从有API地址的网站爬虫，选择.csv
+```{r}
+nyc_water = 
+  GET("https://data.cityofnewyork.us/resource/waf7-5gvc.csv") %>% 
+  content()
+```
+
+## GET 可以从有API地址的网站爬虫，选择.json，会messy，需要更多语句，.json在web更常见
+```{r}
+nyc_water = 
+  GET("https://data.cityofnewyork.us/resource/waf7-5gvc.json") %>% 
+  content("text") %>%
+  jsonlite::fromJSON() %>%
+  as_tibble()
+```
+
+## 
+```{r}
+brfss_smart2010 = 
+  GET("https://data.cdc.gov/api/views/acme-vg9e/rows.csv?accessType=DOWNLOAD") %>% 
+  content("parsed")
+```
+## API 可以下载最新的数据，不用每次都去网站
+
+##
+```{r}
+poke = 
+  GET("http://pokeapi.co/api/v2/pokemon/1") %>%
+  content()
+
+head(poke)
+
+poke$name
+poke$height
+poke$abilities
+```
+
